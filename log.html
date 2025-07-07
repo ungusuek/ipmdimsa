@@ -1,0 +1,150 @@
+<?php
+// Koneksi ke database
+$servername = "localhost";
+$username = "root";
+$password = "";
+$dbname = "login_db";
+
+$conn = new mysqli($servername, $username, $password, $dbname);
+
+// Periksa koneksi
+if ($conn->connect_error) {
+    die("Koneksi gagal: " . $conn->connect_error);
+}
+
+// Fungsi registrasi
+function registrasi($email, $password) {
+    global $conn;
+
+    // Periksa apakah email sudah terdaftar
+    $query = "SELECT * FROM users WHERE email = ?";
+    $stmt = $conn->prepare($query);
+    $stmt->bind_param("s", $email);
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    if ($result->num_rows > 0) {
+        return "Email sudah terdaftar";
+    } else {
+        // Hash password
+        $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+
+        // Simpan data ke database
+        $query = "INSERT INTO users (email, password) VALUES (?, ?)";
+        $stmt = $conn->prepare($query);
+        $stmt->bind_param("ss", $email, $hashed_password);
+        $result = $stmt->execute();
+
+        if ($result) {
+            return "Registrasi berhasil";
+        } else {
+            return "Registrasi gagal: " . $conn->error;
+        }
+    }
+}
+
+// Fungsi login
+function login($email, $password) {
+    global $conn;
+
+    // Periksa apakah email terdaftar
+    $query = "SELECT * FROM users WHERE email = '$email'";
+    $result = $conn->query($query);
+
+    if ($result->num_rows > 0) {
+        $row = $result->fetch_assoc();
+
+        // Login tanpa password untuk admin dan mudabir
+        if ($email == 'admin@admin') {
+            header("Location: index.html");
+            exit;
+        } elseif ($email == 'mudabir@mudabir') {
+            header("Location: mudabir.php");
+            exit;
+        } else {
+            // Periksa password
+            $hashed_password = $row['password'];
+            if (password_verify($password, $hashed_password)) {
+                return "Login berhasil";
+            } else {
+                return "Password salah";
+            }
+        }
+    } else {
+        return "Email tidak terdaftar";
+    }
+}
+
+if (isset($_POST['registrasi'])) {
+    $email = $_POST['email'];
+    $password = $_POST['password'];
+    echo registrasi($email, $password);
+}
+
+if (isset($_POST['login'])) {
+    $email = $_POST['email'];
+    $password = $_POST['password'];
+    $result = login($email, $password);
+    if ($result == "Login berhasil") {
+        session_start();
+        $_SESSION['logged_in'] = true;
+        $_SESSION['email'] = $email;
+        header("Location: index.php");
+        exit;
+    } else {
+        echo $result;
+    }
+}
+
+
+// Tutup koneksi
+$conn->close();
+?>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="css/log.css" />
+    <title>IPM 26 LOGIN PAGE</title>
+</head>
+<body>
+    <div class="container" id="container">
+        <div class="form-container sign-up">
+            <form action="" method="post">
+                <h1>Create Account</h1>
+                <input type="text" name="username" placeholder="username" />
+                <input type="email" name="email" placeholder="Email" />
+                <input type="password" name="password" placeholder="Password" />
+                <button name="registrasi">Sign Up</button>
+            </form>
+        </div>
+        <div class="form-container sign-in">
+            <form action="" method="post">
+                <h1>Sign In</h1>
+                <input type="email" name="email" placeholder="Email" />
+                <input type="password" name="password" placeholder="Password" />
+                <p>Kamu lupa sandi ? <a href="mudabir.php">Klik Disini!</a></p>
+                <button name="login">Sign In</button>
+            </form>
+        </div>
+        <div class="toggle-container">
+            <div class="toggle">
+                <div class="toggle-panel toggle-left">
+                    <h1>Welcome Back!</h1>
+                    <p>Enter your personal details to use all of site features</p>
+                    <button class="hidden" id="login">Sign In</button>
+                </div>
+                <div class="toggle-panel toggle-right">
+                    <h1>Hello, Friend!</h1>
+                    <p>Register with your personal details to use all of site features</p>
+                    <button class="hidden" id="register">Sign Up</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/style.js"></script>
+</body>
+</html>

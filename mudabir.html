@@ -1,0 +1,85 @@
+<?php
+$conn = new mysqli("localhost", "root", "", "login_db");
+
+if ($conn->connect_error) {
+    die("Koneksi gagal: " . $conn->connect_error);
+}
+
+if (isset($_POST['submit'])) {
+    $email = $_POST['email'];
+    $password_lama = $_POST['password_lama'];
+    $password_baru = $_POST['password_baru'];
+    $konfirmasi_password_baru = $_POST['konfirmasi_password_baru'];
+
+    // Cek apakah semua form terisi
+    if (empty($email) || empty($password_lama) || empty($password_baru) || empty($konfirmasi_password_baru)) {
+        echo "Semua form wajib terisi";
+    } else {
+        // Cek apakah password baru dan konfirmasi password baru sama
+        if ($password_baru != $konfirmasi_password_baru) {
+            echo "Password baru dan konfirmasi password baru tidak sama";
+        } else {
+            // Cek apakah email ada di database
+            $query = "SELECT * FROM users WHERE email = '$email'";
+            $result = $conn->query($query);
+
+            if ($result->num_rows > 0) {
+                $row = $result->fetch_assoc();
+                $password_hash = $row['password'];
+
+                // Verifikasi password lama
+                if (password_verify($password_lama, $password_hash)) {
+                    // Update password baru
+                    $password_baru_hash = password_hash($password_baru, PASSWORD_DEFAULT);
+                    $query = "UPDATE users SET password = '$password_baru_hash' WHERE email = '$email'";
+                    if ($conn->query($query)) {
+                        header("Location: log.php");
+                        exit();
+                    } else {
+                        echo "Error: " . $conn->error;
+                    }
+                } else {
+                    echo "Password lama salah";
+                }
+            } else {
+                echo "Email tidak ada di database";
+            }
+        }
+    }
+}
+
+$conn->close();
+?>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="css/log.css" />
+    <title>IPM 26 GANTI PASSWORD</title>
+</head>
+<body>
+    <div class="container" id="container">
+        <div class="form-container sign-in">
+            <form action="" method="post">
+                <h1>Ganti Password</h1>
+                <p>Udah punya akun ? <a href="log.php">Klik Disini!</a></p>
+                <input type="email" name="email" placeholder="Email" />
+                <input type="password" name="password_lama" placeholder="Password Lama" />
+                <input type="password" name="password_baru" placeholder="Password Baru" />
+                <input type="password" name="konfirmasi_password_baru" placeholder="Konfirmasi Password Baru" />
+                <button name="submit">Ganti Password</button>
+            </form>
+                </div>
+                    <div class="toggle-container">
+                    <div class="toggle">
+                    <div class="toggle-panel toggle-right">
+                    <h1>Lupa sandi akun?, Tenang.</h1>
+                    <p>Ganti sandi pake yang mudah di ingat, tapi tetap aman ya friend ! .</p>
+                </div>
+           </div>
+        </div>
+    </div>
+</body>
+</html>
